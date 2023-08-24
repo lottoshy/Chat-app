@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WhatsHappen</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f8f8;
+    }
+
+    #chat-container {
+      display: flex;
+      height: 100vh;
+      /* max-width: 70vw; */
+      margin: 0 auto;
+    }
+
+    #sidebar {
+      width: 25vw;
+      background-color: #075e54;
+      color: white;
+      padding: 16px;
+    }
+
+    #chat-section {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: white;
+      border-left: 1px solid #ddd;
+      width: 75vw;
+    }
+
+    #chat-header {
+      background-color: #075e54;
+      color: white;
+      padding: 16px;
+      font-size: 20px;
+    }
+
+    #messages {
+      flex-grow: 1;
+      overflow-y: auto;
+      list-style-type: none;
+      margin: 0;
+      padding: 16px;
+      border-top: 1px solid #ddd;
+    }
+
+    .message {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .message img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .message-content {
+      background-color: #dcf8c6;
+      padding: 10px;
+      border-radius: 12px;
+      max-width: 60%;
+    }
+
+    #input-container {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      background-color: white;
+      border-top: 1px solid #ddd;
+    }
+
+    #input {
+      flex-grow: 1;
+      padding: 8px;
+      border-radius: 24px;
+      border: 1px solid #ddd;
+      outline: none;
+    }
+
+    #send-button {
+      margin-left: 16px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 24px;
+      background-color: #075e54;
+      color: white;
+      cursor: pointer;
+    }
+
+    #user-list{
+        list-style: none;
+    }
+
+    .user img{
+        border-radius: 50%;
+        padding: 5px;
+    }
+
+   .user{
+        display: flex;
+        align-items: center;
+        margin-left: 0px;
+    }
+    .name{
+        padding-left: 10px;
+    }
+    .separator{
+        height: 1px;
+        width: 100%;
+        opacity: 0.08;
+        background-color: white;
+    }
+
+  </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="sidebar">
+            <h2>Contacts</h2>
+            <ul id="user-list">
+              <!-- Users will be added here -->
+            </ul>
+          </div>          
+      <div id="chat-section">
+        <div id="chat-header">Chat with <span id="contact-name">Ritesh</span></div>
+        <ul id="messages">
+          <!-- Messages here -->
+        </ul>
+        <div id="input-container">
+          <input id="input" placeholder="Type a message..." autocomplete="off" />
+          <button id="send-button">Send</button>
+        </div>
+      </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+   $(function () {
+  const socket = io();
+  const userList = $('#user-list');
+
+  // Fetch random user data using Random User Generator API
+  $.ajax({
+    url: 'https://randomuser.me/api/?results=10',
+    dataType: 'json',
+    success: function (data) {
+      const users = data.results;
+      users.forEach(function (user) {
+        const userName = `${user.name.first} ${user.name.last}`;
+        const userImage = user.picture.thumbnail;
+
+        // Create a list item for each user with profile picture
+        const userItem = `
+          <li class="user" data-name="${userName}">
+            <img src="${userImage}" alt="${userName}" />
+            <span class="name">${userName}</span>
+          </li>`;
+          
+        userList.append(userItem);
+        
+        // Add a separator line between users
+        const separatorItem = '<li class="separator"></li>';
+        userList.append(separatorItem);
+      });
+
+      // Handle user selection from the sidebar
+      userList.on('click', '.user', function () {
+        const selectedUserName = $(this).data('name');
+        $('#contact-name').text(selectedUserName);
+        // You can also implement logic to clear previous messages here
+      });
+    }
+  });
+
+  //Code for sending and receiving messages
+  $(function () {
+  const socket = io();
+  const userList = $('#user-list');
+
+  // Emoji mapping
+  const emojiMap = {
+    'react': '⚛️',
+    'woah': '😯',
+    'hey': '👋',
+    'lol': '😂',
+    'like': '❤️',
+    'congratulations': '🎉',
+    'React': '⚛️',
+    'Woah': '😯',
+    'Hey': '👋',
+    'Lol': '😂',
+    'Like': '❤️',
+    'Congratulations': '🎉'
+  };
+
+  // Fetch random user data using Random User Generator API
+  // ...
+
+  // Handle user selection from the sidebar
+  // ...
+
+  // Rest of your existing code for sending and receiving messages
+  // Not familiar with socket.io so implemented emoji replace function with ChatGPT
+  $('#send-button').click(function () {
+    const message = $('#input').val();
+    if (message.trim() !== '') {
+      // Replace keywords with emojis
+      const messageWithEmojis = replaceKeywordsWithEmojis(message);
+      socket.emit('chat message', messageWithEmojis);
+      $('#input').val('');
+    }
+  });
+
+  socket.on('chat message', function (msg) {
+    // Replace keywords with emojis before displaying the message
+    const messageWithEmojis = replaceKeywordsWithEmojis(msg);
+    const messageHTML = `
+      <li class="message">
+        <div class="message-content">${messageWithEmojis}</div>
+      </li>`;
+    $('#messages').append(messageHTML);
+    console.log(msg)
+  });
+
+  function replaceKeywordsWithEmojis(text) {
+    // Regular expression to match keywords
+    const keywordRegex = new RegExp(Object.keys(emojiMap).join('|'), 'gi');
+    
+    // Replace keywords with emojis using the emoji map
+    const messageWithEmojis = text.replace(keywordRegex, match => emojiMap[match.toLowerCase()]);
+    
+    return messageWithEmojis;
+  }
+});
+});
+
+    </script>
+  </body>
+</html>
